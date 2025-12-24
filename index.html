@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Birthday Gacha!</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+      :root {
+        --primary: #ff8fa3;
+        --secondary: #fff0f3;
+        --accent: #ff4d6d;
+        --text: #590d22;
+      }
+
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: "Quicksand", sans-serif;
+        background-color: var(--secondary);
+        color: var(--text);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+
+      h1 {
+        color: var(--accent);
+        margin-bottom: 5px;
+      }
+      p {
+        margin-top: 0;
+        opacity: 0.8;
+      }
+
+      /* AREA GACHA */
+      .game-area {
+        width: 100%;
+        max-width: 350px;
+        display: block; /* Awalnya muncul */
+      }
+
+      .gacha-box {
+        background: white;
+        border-radius: 30px;
+        padding: 40px;
+        border: 4px solid var(--primary);
+        margin: 20px 0;
+        height: 120px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 4rem;
+        box-shadow: 0 10px 20px rgba(255, 77, 109, 0.2);
+      }
+
+      .btn-main {
+        background: var(--accent);
+        color: white;
+        border: none;
+        padding: 15px 40px;
+        font-size: 1.2rem;
+        font-weight: bold;
+        border-radius: 50px;
+        width: 100%;
+        cursor: pointer;
+        box-shadow: 0 5px 15px rgba(255, 77, 109, 0.3);
+      }
+      .btn-main:disabled {
+        background: #ccc;
+        box-shadow: none;
+      }
+
+      /* AREA PEMILIHAN (Awalnya Sembunyi) */
+      .selection-area {
+        display: none; /* Hidden by default */
+        width: 100%;
+        max-width: 350px;
+        animation: fadeIn 1s;
+      }
+
+      .card-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 20px;
+      }
+
+      .prize-card {
+        background: white;
+        padding: 15px;
+        border-radius: 15px;
+        border: 2px solid var(--primary);
+        font-weight: bold;
+        cursor: pointer;
+        transition: transform 0.2s;
+        text-align: left;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .prize-card:hover {
+        background: var(--secondary);
+        transform: scale(1.02);
+      }
+
+      .prize-card span {
+        font-size: 1.2rem;
+        margin-right: 10px;
+      }
+
+      /* Animasi */
+      @keyframes shake {
+        0% {
+          transform: rotate(0deg);
+        }
+        25% {
+          transform: rotate(5deg);
+        }
+        75% {
+          transform: rotate(-5deg);
+        }
+      }
+      .shaking {
+        animation: shake 0.3s infinite;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* Modal Sederhana untuk Info Dapat Apa */
+      .mini-modal {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--text);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 20px;
+        display: none;
+        z-index: 999;
+        font-size: 0.9rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="headerTitle">
+      <h1>Met Ultah pinn, hadiahnya gacha duluu 🎉</h1>
+      <p>
+        Kamu punya
+        <span id="sisaToken" style="font-weight: bold; color: var(--accent)"
+          >5</span
+        >
+        kesempatan.
+      </p>
+    </div>
+
+    <div class="game-area" id="gameArea">
+      <div class="gacha-box" id="box">🎁</div>
+      <button class="btn-main" id="btnSpin" onclick="putar()">PUTAR!</button>
+      <p style="margin-top: 20px; font-size: 0.8rem">
+        Kumpulkan 5 hadiah, lalu pilih satu!
+      </p>
+    </div>
+
+    <div class="selection-area" id="selectionArea">
+      <h2>Hore! Terkumpul!</h2>
+      <p>
+        Silakan <b>klik salah satu</b> hadiah di bawah ini untuk klaim ke
+        WhatsApp aku:
+      </p>
+      <div class="card-list" id="listHadiah"></div>
+    </div>
+
+    <div class="mini-modal" id="notif">Dapat: Sesuatu!</div>
+
+    <script>
+      // ==========================================
+      // CONFIGURASI (EDIT DI SINI)
+      // ==========================================
+
+      // 1. Masukkan Nomor WA kamu (ganti 08 dg 62)
+      // Contoh: 6281234567890
+      const nomorWA = "6285339225927";
+
+      // 2. Daftar Hadiah yang mungkin keluar
+      const databaseHadiah = [
+        "dapet seblak nihh tapi level 5, mau ngga",
+        "emmm dapet kebab mungkinn",
+        "Boleh Request Lagu Apa Aja",
+        "Voucher joki tugas kuliah 1x",
+        "Sesi Curhat, anjay",
+        "Makan Malam Gratis, tapi ajak shopi",
+        "Uang Jajan Tambahan",
+        "Boneka tapi aku yang milih ",
+        "wihh dapet BMW.png",
+      ];
+
+      // ==========================================
+      // LOGIC JANGAN DIUBAH
+      // ==========================================
+
+      let token = 5;
+      let hasilKoleksi = []; // Menyimpan 5 hasil gacha
+      const box = document.getElementById("box");
+      const btnSpin = document.getElementById("btnSpin");
+      const notif = document.getElementById("notif");
+
+      function putar() {
+        if (token <= 0) return;
+
+        // Animasi
+        btnSpin.disabled = true;
+        box.classList.add("shaking");
+        let tempInterval = setInterval(() => {
+          const emojis = ["🎁", "💖", "✨", "🎀"];
+          box.innerText = emojis[Math.floor(Math.random() * emojis.length)];
+        }, 100);
+
+        // Tunggu hasil
+        setTimeout(() => {
+          clearInterval(tempInterval);
+          box.classList.remove("shaking");
+
+          // Ambil hadiah random
+          const item =
+            databaseHadiah[Math.floor(Math.random() * databaseHadiah.length)];
+          hasilKoleksi.push(item);
+
+          // Update UI
+          box.innerText = "✨";
+          token--;
+          document.getElementById("sisaToken").innerText = token;
+
+          // Tampilkan notif kecil
+          showNotif(`Dapat: ${item}`);
+          confetti({ particleCount: 50, origin: { y: 0.7 } });
+
+          if (token > 0) {
+            btnSpin.disabled = false;
+          } else {
+            // Jika token habis, masuk fase pemilihan
+            selesaiGacha();
+          }
+        }, 1500);
+      }
+
+      function showNotif(text) {
+        notif.innerText = text;
+        notif.style.display = "block";
+        setTimeout(() => {
+          notif.style.display = "none";
+        }, 2000);
+      }
+
+      function selesaiGacha() {
+        // Sembunyikan area game
+        document.getElementById("gameArea").style.display = "none";
+        document.getElementById("headerTitle").style.display = "none";
+
+        // Munculkan area pemilihan
+        const areaPilih = document.getElementById("selectionArea");
+        const listContainer = document.getElementById("listHadiah");
+
+        areaPilih.style.display = "block";
+
+        // Render 5 hadiah yang didapat tadi
+        hasilKoleksi.forEach((hadiah) => {
+          const btn = document.createElement("div");
+          btn.className = "prize-card";
+          btn.innerHTML = `<span>🎁</span> ${hadiah}`;
+
+          // Saat diklik, kirim ke WA
+          btn.onclick = () => klaimHadiah(hadiah);
+
+          listContainer.appendChild(btn);
+        });
+
+        confetti({ particleCount: 200, spread: 100 });
+      }
+
+      function klaimHadiah(hadiahDipilih) {
+        // Format pesan WA
+        const pesan = `Halo! Aku sudah main Gacha Ultah. Dari 5 pilihan, aku pilih hadiah ini: \n\n*${hadiahDipilih}* \n\nJangan lupa ditepati ya! 🥳`;
+
+        // Encode URL
+        const url = `https://wa.me/${nomorWA}?text=${encodeURIComponent(
+          pesan
+        )}`;
+
+        // Buka WA
+        window.open(url, "_blank");
+      }
+    </script>
+  </body>
+</html>
