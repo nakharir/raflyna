@@ -44,7 +44,7 @@
       .game-area {
         width: 100%;
         max-width: 350px;
-        display: block; /* Awalnya muncul */
+        display: block;
       }
 
       .gacha-box {
@@ -59,6 +59,7 @@
         align-items: center;
         font-size: 4rem;
         box-shadow: 0 10px 20px rgba(255, 77, 109, 0.2);
+        transition: transform 0.1s;
       }
 
       .btn-main {
@@ -78,9 +79,9 @@
         box-shadow: none;
       }
 
-      /* AREA PEMILIHAN (Awalnya Sembunyi) */
+      /* AREA PEMILIHAN */
       .selection-area {
-        display: none; /* Hidden by default */
+        display: none;
         width: 100%;
         max-width: 350px;
         animation: fadeIn 1s;
@@ -144,7 +145,6 @@
         }
       }
 
-      /* Modal Sederhana untuk Info Dapat Apa */
       .mini-modal {
         position: fixed;
         top: 20px;
@@ -161,8 +161,22 @@
     </style>
   </head>
   <body>
+    <audio id="musikLatar" loop>
+      <source
+        src="https://assets.mixkit.co/music/preview/mixkit-happy-birthday-music-box-530.mp3"
+        type="audio/mpeg"
+      />
+    </audio>
+
+    <audio id="soundRolling">
+      <source
+        src="https://assets.mixkit.co/sfx/preview/mixkit-drum-roll-566.mp3"
+        type="audio/mpeg"
+      />
+    </audio>
+
     <div id="headerTitle">
-      <h1>Met Ultah pinn, hadiahnya gacha duluu 🎉</h1>
+      <h1>HBD pinn, hadiahnya gacha duluu 🎉</h1>
       <p>
         Kamu punya
         <span id="sisaToken" style="font-weight: bold; color: var(--accent)"
@@ -193,14 +207,10 @@
 
     <script>
       // ==========================================
-      // CONFIGURASI (EDIT DI SINI)
+      // EDIT NOMOR WA DISINI
       // ==========================================
+      const nomorWA = "6285339225927"; // Ganti dengan nomor kamu
 
-      // 1. Masukkan Nomor WA kamu (ganti 08 dg 62)
-      // Contoh: 6281234567890
-      const nomorWA = "6285339225927";
-
-      // 2. Daftar Hadiah yang mungkin keluar
       const databaseHadiah = [
         "dapet seblak nihh tapi level 5, mau ngga",
         "emmm dapet kebab mungkinn",
@@ -214,49 +224,63 @@
       ];
 
       // ==========================================
-      // LOGIC JANGAN DIUBAH
+      // LOGIC
       // ==========================================
-
       let token = 5;
-      let hasilKoleksi = []; // Menyimpan 5 hasil gacha
+      let hasilKoleksi = [];
       const box = document.getElementById("box");
       const btnSpin = document.getElementById("btnSpin");
       const notif = document.getElementById("notif");
 
+      // Ambil elemen Audio
+      const bgMusic = document.getElementById("musikLatar");
+      const sfxRoll = document.getElementById("soundRolling");
+
       function putar() {
+        // 1. Nyalakan Musik Latar (hanya sekali di awal)
+        if (bgMusic.paused) {
+          bgMusic.volume = 0.4; // Volume pelan enak didengar
+          bgMusic.play().catch((e) => console.log("Audio play failed", e));
+        }
+
+        // 2. Mainkan SFX Drum Roll (Reset ke awal setiap klik)
+        sfxRoll.currentTime = 0;
+        sfxRoll.volume = 0.8; // Volume SFX lebih keras
+        sfxRoll.play();
+
         if (token <= 0) return;
 
-        // Animasi
         btnSpin.disabled = true;
         box.classList.add("shaking");
+
+        // Animasi Emoji Berubah
         let tempInterval = setInterval(() => {
-          const emojis = ["🎁", "💖", "✨", "🎀"];
+          const emojis = ["🎁", "💖", "✨", "🎀", "🎵", "🍰"];
           box.innerText = emojis[Math.floor(Math.random() * emojis.length)];
         }, 100);
 
-        // Tunggu hasil
+        // Tunggu 1.5 detik (sesuai durasi SFX pendek)
         setTimeout(() => {
           clearInterval(tempInterval);
           box.classList.remove("shaking");
 
-          // Ambil hadiah random
+          // Matikan SFX Rolling
+          sfxRoll.pause();
+
           const item =
             databaseHadiah[Math.floor(Math.random() * databaseHadiah.length)];
           hasilKoleksi.push(item);
 
-          // Update UI
           box.innerText = "✨";
           token--;
           document.getElementById("sisaToken").innerText = token;
 
-          // Tampilkan notif kecil
           showNotif(`Dapat: ${item}`);
           confetti({ particleCount: 50, origin: { y: 0.7 } });
 
           if (token > 0) {
             btnSpin.disabled = false;
           } else {
-            // Jika token habis, masuk fase pemilihan
             selesaiGacha();
           }
         }, 1500);
@@ -271,25 +295,19 @@
       }
 
       function selesaiGacha() {
-        // Sembunyikan area game
         document.getElementById("gameArea").style.display = "none";
         document.getElementById("headerTitle").style.display = "none";
 
-        // Munculkan area pemilihan
         const areaPilih = document.getElementById("selectionArea");
         const listContainer = document.getElementById("listHadiah");
 
         areaPilih.style.display = "block";
 
-        // Render 5 hadiah yang didapat tadi
         hasilKoleksi.forEach((hadiah) => {
           const btn = document.createElement("div");
           btn.className = "prize-card";
           btn.innerHTML = `<span>🎁</span> ${hadiah}`;
-
-          // Saat diklik, kirim ke WA
           btn.onclick = () => klaimHadiah(hadiah);
-
           listContainer.appendChild(btn);
         });
 
@@ -297,15 +315,10 @@
       }
 
       function klaimHadiah(hadiahDipilih) {
-        // Format pesan WA
         const pesan = `Halo! Aku sudah main Gacha Ultah. Dari 5 pilihan, aku pilih hadiah ini: \n\n*${hadiahDipilih}* \n\nJangan lupa ditepati ya! 🥳`;
-
-        // Encode URL
         const url = `https://wa.me/${nomorWA}?text=${encodeURIComponent(
           pesan
         )}`;
-
-        // Buka WA
         window.open(url, "_blank");
       }
     </script>
